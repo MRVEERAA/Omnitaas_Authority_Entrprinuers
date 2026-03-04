@@ -1,12 +1,9 @@
 import rateLimit from "express-rate-limit";
 
-export const rateLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 50, // limit each IP
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    success: false,
-    message: "Too many requests, please try again later.",
-  },
+const rateLimitMiddleware = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 mins
+  max: 100,
+  message: "Too many requests, please try again later.",
 });
+
+export default rateLimitMiddleware;

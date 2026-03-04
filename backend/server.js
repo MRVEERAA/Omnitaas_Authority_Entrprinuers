@@ -1,26 +1,32 @@
 import express from "express";
-import cors from "cors";
 import dotenv from "dotenv";
+import cors from "cors";
+
 import connectDB from "./src/config/db.js";
-import { errorMiddleware } from "./src/middlewares/error.middleware.js";
-import { rateLimiter } from "./src/middlewares/rateLimiter.middleware.js";
+import authRoutes from "./src/routes/auth.routes.js";
+import rateLimitMiddleware from "./src/middlewares/rateLimiter.middleware.js";
+import errorMiddleware from "./src/middlewares/rateLimiter.middleware.js";
+
 dotenv.config();
 
 const app = express();
 
-app.use(rateLimiter);
+// Connect Database
+connectDB();
+
+// Global Middlewares
 app.use(cors());
 app.use(express.json());
+app.use(rateLimitMiddleware);
 
-app.get("/", (req, res) => {
-  res.send("Backend Running...");
-});
+// Routes
+app.use("/", authRoutes);
 
+// Global Error Middleware (last)
 app.use(errorMiddleware);
 
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  connectDB();
   console.log(`Server running on port ${PORT}`);
 });
