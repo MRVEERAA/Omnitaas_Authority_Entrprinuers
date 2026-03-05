@@ -3,23 +3,43 @@ import { createContext, useContext, useState } from "react";
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [mode, setMode] = useState(localStorage.getItem("mode") || "");
+  // Load from localStorage if exists
+  const [mode, setMode] = useState(localStorage.getItem("mode") || ""); // simple / db
   const [user, setUser] = useState(
-    JSON.parse(localStorage.getItem("user")) || {},
-  );
+    JSON.parse(localStorage.getItem("user")) || null,
+  ); // logged-in user info
+  const [token, setToken] = useState(localStorage.getItem("token") || null); // DB auth JWT
 
-  const saveMode = (selectedMode) => {
-    setMode(selectedMode);
-    localStorage.setItem("mode", selectedMode);
+  // Save mode in state + localStorage
+  const saveMode = (m) => {
+    setMode(m);
+    localStorage.setItem("mode", m);
   };
 
-  const saveUser = (userData) => {
-    setUser(userData);
-    localStorage.setItem("user", JSON.stringify(userData));
+  // Save user info + optional token in state + localStorage
+  const saveUser = (u, t) => {
+    setUser(u);
+    localStorage.setItem("user", JSON.stringify(u));
+    if (t) {
+      setToken(t);
+      localStorage.setItem("token", t);
+    }
+  };
+
+  // Logout clears everything
+  const logout = () => {
+    setUser(null);
+    setToken(null);
+    setMode("");
+    localStorage.removeItem("user");
+    localStorage.removeItem("token");
+    localStorage.removeItem("mode");
   };
 
   return (
-    <AuthContext.Provider value={{ mode, saveMode, user, saveUser }}>
+    <AuthContext.Provider
+      value={{ mode, saveMode, user, token, saveUser, logout }}
+    >
       {children}
     </AuthContext.Provider>
   );

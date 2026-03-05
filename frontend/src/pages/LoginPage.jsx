@@ -1,91 +1,108 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import InputField from "../components/InputField";
-import { login, register } from "../services/auth.service";
 import { useAuth } from "../context/AuthContext";
+import { login } from "../services/auth.service";
 
 const LoginPage = () => {
+  const { mode, user, saveUser } = useAuth();
   const navigate = useNavigate();
-  const { mode, saveUser } = useAuth();
 
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  const handleSubmit = async (e) => {
+  useEffect(() => {
+    if (user) navigate("/welcome", { replace: true });
+    if (!mode) navigate("/"); // if no mode selected
+  }, [user, mode]);
+
+  const handleLogin = async (e) => {
     e.preventDefault();
+    setError("");
+
+    if (!username || !password) {
+      setError("All fields are required");
+      return;
+    }
+
     try {
-      let userData = { email };
-      if (mode === "db" && e.nativeEvent.submitter.name === "register") {
-        // DB register
-        const res = await register(name, email, password);
-        alert(res.message);
-        return;
+      if (mode === "simple") {
+        if (username !== "admin") {
+          setError("User not found");
+          return;
+        }
+
+        if (password !== "admin") {
+          setError("Incorrect password");
+          return;
+        }
+
+        // Login success
+        saveUser({ name: "admin" });
+        navigate("/welcome", { replace: true });
       }
 
-      // login
-      await login(mode, email, password);
-      if (mode === "simple") userData.name = "admin";
-      if (mode === "db") userData.name = name || email; // DB login should fetch real name
-      saveUser(userData);
-      navigate("/welcome");
+      if (mode === "db") {
+        const res = await login(mode, username, password);
+        saveUser(
+          {
+            name: res.user.name,
+            username: res.user.username,
+            email: res.user.email,
+          },
+          res.token,
+        );
+        navigate("/welcome", { replace: true });
+      }
     } catch (err) {
       setError(err.response?.data?.message || "Server error");
     }
   };
 
+  const goRegister = () => navigate("/register");
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen">
-      <h1 className="text-3xl font-bold mb-6">
-        {mode === "simple" ? "Simple Login" : "DB Login"}
-      </h1>
-      <form
-        className="bg-white p-6 rounded shadow-md w-96"
-        onSubmit={handleSubmit}
-      >
-        {mode === "db" && (
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-indigo-50 to-purple-50 p-4">
+      <div className="w-full max-w-md">
+        <h1 className="text-4xl font-extrabold mb-8 text-indigo-600 text-center drop-shadow-lg">
+          {mode === "simple" ? "Simple Login" : "DB Login"}
+        </h1>
+        <form
+          onSubmit={handleLogin}
+          className="bg-white backdrop-blur-md bg-opacity-80 shadow-2xl rounded-xl p-8 flex flex-col gap-5"
+        >
           <InputField
-            label="Name"
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Enter your name"
+            label="Username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="Enter username"
           />
-        )}
-        <InputField
-          label="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Enter your email"
-        />
-        <InputField
-          label="Password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Enter your password"
-        />
-        {error && <p className="text-red-500 mb-2">{error}</p>}
-        <div className="flex gap-4">
-          <button
-            type="submit"
-            name="login"
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-          >
+          <InputField
+            label="Password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Enter password"
+          />
+          {error && (
+            <p className="text-red-500 font-medium text-sm text-center">
+              {error}
+            </p>
+          )}
+          <button className="bg-indigo-600 text-white font-semibold py-3 rounded-xl shadow-lg hover:bg-indigo-700 hover:scale-105 transition-transform duration-200">
             Login
           </button>
           {mode === "db" && (
-            <button
-              type="submit"
-              name="register"
-              className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+            <p
+              className="text-indigo-500 text-center cursor-pointer mt-2 hover:underline hover:text-indigo-700 transition-colors"
+              onClick={goRegister}
             >
-              Register
-            </button>
+              Create account
+            </p>
           )}
-        </div>
-      </form>
+        </form>
+      </div>
     </div>
   );
 };

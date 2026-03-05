@@ -5,31 +5,36 @@ import User from "../models/user.model.js";
 // REGISTER (DB MODE ONLY)
 export const registerController = async (req, res, next) => {
   try {
-    const { mode, name, email, password } = req.body;
+    const { mode, name, username, email, password } = req.body;
 
     if (mode !== "db") {
-      return res.status(400).json({
-        message: "Register allowed only in DB mode",
-      });
+      return res
+        .status(400)
+        .json({ message: "Register allowed only in DB mode" });
     }
 
-    const existingUser = await User.findOne({ email });
+    // Check if user or email already exists
+    const existingUser = await User.findOne({
+      $or: [{ username }, { email }],
+    });
     if (existingUser) {
-      return res.status(400).json({
-        message: "User already exists",
-      });
+      return res
+        .status(400)
+        .json({ message: "Username or Email already exists" });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    await User.create({
+    const user = await User.create({
       name,
+      username,
       email,
       password: hashedPassword,
     });
 
     res.status(201).json({
       message: "User registered successfully",
+      user: { name: user.name, username: user.username, email: user.email },
     });
   } catch (error) {
     next(error);
@@ -39,25 +44,39 @@ export const registerController = async (req, res, next) => {
 // LOGIN (Handles Both Modes)
 export const loginController = async (req, res, next) => {
   try {
-    const { mode, email, password } = req.body;
+    const { mode, username, password } = req.body;
+
+    // Validate required fields
+    if (!username || !password) {
+      return res.status(400).json({
+        message: "All fields are required",
+      });
+    }
 
     // SIMPLE MODE
     if (mode === "simple") {
-      if (email === "admin" && password === "admin") {
-        return res.status(200).json({
-          message: "Simple Login Successful",
-          mode: "simple",
+      if (username !== "admin") {
+        return res.status(404).json({
+          message: "User not found",
         });
       }
 
-      return res.status(401).json({
-        message: "Invalid credentials (Simple Mode)",
+      if (password !== "admin") {
+        return res.status(401).json({
+          message: "Incorrect password",
+        });
+      }
+
+      return res.status(200).json({
+        message: "Simple Login Successful",
+        mode: "simple",
+        user: { name: "admin", username: "admin" },
       });
     }
 
     // DB MODE
     if (mode === "db") {
-      const user = await User.findOne({ email });
+      const user = await User.findOne({ username });
 
       if (!user) {
         return res.status(404).json({
@@ -69,7 +88,7 @@ export const loginController = async (req, res, next) => {
 
       if (!isMatch) {
         return res.status(401).json({
-          message: "Invalid password",
+          message: "Incorrect password",
         });
       }
 
@@ -79,11 +98,12 @@ export const loginController = async (req, res, next) => {
 
       return res.status(200).json({
         message: "DB Login Successful",
+        user: { name: user.name, username: user.username, email: user.email },
         token,
-        mode: "db",
       });
     }
 
+    // Invalid mode selected
     return res.status(400).json({
       message: "Invalid mode selected",
     });
