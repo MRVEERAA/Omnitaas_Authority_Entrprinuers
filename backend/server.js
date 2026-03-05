@@ -15,7 +15,12 @@ const app = express();
 connectDB();
 
 // Global Middlewares
-app.use(cors());
+app.use(
+  cors({
+    origin: "*", // or frontend URL
+  }),
+);
+
 app.use(express.json());
 app.use(rateLimitMiddleware);
 
