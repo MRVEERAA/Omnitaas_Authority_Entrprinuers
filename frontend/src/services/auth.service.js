@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const BASE_URL = "http://localhost:5000";
+const BASE_URL = "https://omnitaas-login-app.onrender.com";
 
 // Login (both modes)
 export const login = async (mode, username, password) => {
